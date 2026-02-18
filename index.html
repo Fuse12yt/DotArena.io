@@ -6,10 +6,28 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+<!-- MENU -->
+<div id="menu">
+  <h1>DotArena.io</h1>
+  <input type="text" id="playerName" placeholder="Ton pseudo">
+  <button id="startBtn">Start</button>
+  <p>Score max: <span id="maxScore">0</span></p>
+</div>
+
+<!-- GAME CANVAS -->
 <canvas id="game"></canvas>
+
+<!-- LEADERBOARD -->
 <div id="leaderboard"><strong>Leaderboard</strong><br></div>
+
+<!-- GAME OVER SCREEN -->
+<div id="gameOver">
+  <h2>Game Over</h2>
+  <p id="finalScore"></p>
+  <button id="restartBtn">Restart</button>
+</div>
 
 <script src="script.js"></script>
 </body>
 </html>
-
