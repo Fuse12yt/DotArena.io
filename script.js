@@ -18,6 +18,7 @@ const maxScoreDisplay = document.getElementById("maxScore");
 let player = null;
 let bots = [];
 let bonus = [];
+let particles = [];
 let mouse = {x:0,y:0};
 let gameRunning = false;
 let maxScore = parseFloat(localStorage.getItem("maxScore")) || 0;
@@ -25,8 +26,34 @@ maxScoreDisplay.innerText = maxScore;
 
 // BOT NOMS ABRUSDES
 const botNames = ["PatateNinja","FromageVolant","ChienArcEnCiel","LicorneFurieuse","ChatMutant","PandaMagique","BananeExplosive","CactusDansant"];
-
 function randomColor(){ return `hsl(${Math.random()*360},80%,60%)`; }
+
+// PARTICULES
+class Particle{
+  constructor(x,y,color){
+    this.x=x;this.y=y;
+    this.vx=(Math.random()-0.5)*4;
+    this.vy=(Math.random()-0.5)*4;
+    this.alpha=1;
+    this.color=color;
+    this.size=5+Math.random()*5;
+  }
+  update(){
+    this.x+=this.vx;
+    this.y+=this.vy;
+    this.alpha-=0.03;
+  }
+  draw(ctx){
+    ctx.save();
+    ctx.globalAlpha=this.alpha;
+    ctx.fillStyle=this.color;
+    ctx.beginPath();
+    ctx.arc(this.x,this.y,this.size,0,Math.PI*2);
+    ctx.fill();
+    ctx.closePath();
+    ctx.restore();
+  }
+}
 
 // INIT GAME
 function initGame(playerName){
@@ -43,6 +70,7 @@ function initGame(playerName){
     });
   }
   bonus = [];
+  particles = [];
   spawnBonus();
 }
 
@@ -58,6 +86,11 @@ canvas.addEventListener("mousemove",e=>{mouse.x=e.clientX; mouse.y=e.clientY;});
 
 // COLLISIONS
 function distance(a,b){ return Math.hypot(a.x-b.x,a.y-b.y); }
+
+// RESPAWN POSITION
+function randomPos(){
+  return {x:Math.random()*canvas.width, y:Math.random()*canvas.height};
+}
 
 // GAME LOOP
 function loop(){
@@ -82,6 +115,13 @@ function loop(){
     bots.forEach(bot=>{ if(distance(bot,b)<bot.r+b.r){ bot.r+=2; bot.score+=2; bonus.splice(i,1); spawnBonus(); } });
   });
 
+  // DRAW PARTICLES
+  particles.forEach((p,i)=>{
+    p.update();
+    if(p.alpha<=0) particles.splice(i,1);
+    else p.draw(ctx);
+  });
+
   // DRAW PLAYER
   ctx.beginPath();
   ctx.arc(player.x,player.y,player.r,0,Math.PI*2);
@@ -90,22 +130,49 @@ function loop(){
   ctx.shadowBlur = 20;
   ctx.fill();
   ctx.closePath();
+  ctx.fillStyle="white";
+  ctx.font="16px Arial";
+  ctx.textAlign="center";
+  ctx.fillText(player.name,player.x,player.y- player.r -5);
 
   // DRAW BOTS
   bots.forEach(bot=>{
-    // AI : move towards player or random direction if small
+    // AI MOVE
     let dx = player.x - bot.x;
     let dy = player.y - bot.y;
     let dist = Math.hypot(dx,dy);
-    if(bot.r<player.r){ // fuir si plus petit
-      bot.x -= dx/dist*2;
-      bot.y -= dy/dist*2;
-    }else{ // poursuivre joueur si plus gros
-      bot.x += dx/dist*2;
-      bot.y += dy/dist*2;
+    if(bot.r<player.r){ bot.x -= dx/dist*2; bot.y -= dy/dist*2; } // fuir
+    else{ bot.x += dx/dist*2; bot.y += dy/dist*2; } // poursuivre
+
+    // COLLISION BOT-BOT
+    bots.forEach(other=>{
+      if(bot===other) return;
+      let d = distance(bot,other);
+      if(d<bot.r+other.r){
+        if(bot.r>other.r){
+          bot.r+=other.r/2; // plus gros gagne
+          particles.push(new Particle(other.x,other.y,other.color));
+          let pos = randomPos();
+          other.x = pos.x; other.y = pos.y; other.r=20;
+        }
+      }
+    });
+
+    // COLLISION PLAYER-BOT
+    if(distance(bot,player)<bot.r+player.r){
+      if(bot.r>=player.r){
+        particles.push(new Particle(player.x,player.y,player.color));
+        gameOver();
+      }else{
+        player.r += bot.r/2;
+        player.score += Math.floor(bot.r);
+        particles.push(new Particle(bot.x,bot.y,bot.color));
+        let pos = randomPos();
+        bot.x=pos.x; bot.y=pos.y; bot.r=20;
+      }
     }
 
-    // DRAW
+    // DRAW BOT
     ctx.beginPath();
     ctx.arc(bot.x,bot.y,bot.r,0,Math.PI*2);
     ctx.fillStyle = bot.color;
@@ -113,29 +180,10 @@ function loop(){
     ctx.shadowBlur = 15;
     ctx.fill();
     ctx.closePath();
-
-    // COLLISION BOT-BOT
-    bots.forEach(other=>{
-      if(bot===other) return;
-      let d = distance(bot,other);
-      if(d<bot.r+other.r){
-        let angle = Math.atan2(other.y-bot.y,other.x-bot.x);
-        bot.x -= Math.cos(angle);
-        bot.y -= Math.sin(angle);
-      }
-    });
-
-    // COLLISION PLAYER-BOT
-    if(distance(bot,player)<bot.r+player.r){
-      if(bot.r>=player.r){
-        // PLAYER DEAD
-        gameOver();
-      }else{
-        player.r += bot.r/2;
-        player.score += Math.floor(bot.r);
-        bots.splice(bots.indexOf(bot),1);
-      }
-    }
+    ctx.fillStyle="white";
+    ctx.font="14px Arial";
+    ctx.textAlign="center";
+    ctx.fillText(bot.name,bot.x,bot.y-bot.r-5);
   });
 
   // UPDATE LEADERBOARD
@@ -174,4 +222,3 @@ startBtn.addEventListener("click",()=>{
   gameRunning = true;
   loop();
 });
-
