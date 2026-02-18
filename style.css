@@ -1,1 +1,22 @@
+body {
+  margin:0;
+  overflow:hidden;
+  background:#111;
+  font-family:sans-serif;
+}
+
+canvas {
+  display:block;
+  background:#111;
+}
+
+#leaderboard {
+  position:absolute;
+  top:10px;
+  right:10px;
+  color:white;
+  background:rgba(0,0,0,0.5);
+  padding:10px;
+  border-radius:10px;
+}
 
